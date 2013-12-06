@@ -139,7 +139,7 @@ class AstBuilderInvocationTrap extends CodeVisitorSupport {
         if (call == null) throw new IllegalArgumentException("Null: call");
 
         // is method name correct?
-        if (call.getMethod() instanceof ConstantExpression && "macro".equals(((ConstantExpression) call.getMethod()).getValue())) {
+        if (call.getMethod() instanceof ConstantExpression && MacroTransformation.MACRO_METHOD.equals(((ConstantExpression) call.getMethod()).getValue())) {
 
             // is method object correct type?
             if (call.getObjectExpression() == THIS_EXPRESSION) {

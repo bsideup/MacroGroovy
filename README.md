@@ -4,6 +4,7 @@ MacroGroovy [![Build Status](https://travis-ci.org/bsideup/MacroGroovy.png)](htt
 Tired of Groovy ast transformation generation code? 
 
 ```groovy
+def someVariable = new ConstantExpression("someValue");
 def returnStatement = new ReturnStatement(
     new ConstructorCallExpression(
         ClassHelper.make(SomeCoolClass),
@@ -14,14 +15,15 @@ def returnStatement = new ReturnStatement(
 
 Looks familar, huh? Maybe this will be better?
 ```groovy
-def returnStatement = macro { return new SomeCoolClass($v{someVariable}) }
+def someVariable = macro { "someValue" };
+def returnStatement = macro { return new SomeCoolClass($v{ someVariable }) }
 ```
 
 Now it's possible with MacroGroovy!
 
 You can even use macro inside macro:
 ```groovy
-def constructorCall = macro { new SomeCoolClass($v{macro {someVariable}}); }
+def constructorCall = macro { new SomeCoolClass($v{ macro { "someValue" } }) }
 ```
 
 ![Build Status](http://i1.kym-cdn.com/photos/images/newsfeed/000/001/123/xzibit-wtf.jpg)]

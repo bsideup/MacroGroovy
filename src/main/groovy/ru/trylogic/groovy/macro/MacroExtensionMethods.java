@@ -57,12 +57,16 @@ public class MacroExtensionMethods {
                         return null; // Could be null if there is no errors
                     }
                 }).visitBlockStatement(closureBlock);
-
-                Statement result = closureBlock.getStatements().get(0);
-                if(result instanceof ExpressionStatement) {
-                    return ((ExpressionStatement) result).getExpression();
+                
+                if(closureBlock.getStatements().size() == 1) {
+                    Statement result = closureBlock.getStatements().get(0);
+                    if(result instanceof ExpressionStatement) {
+                        return ((ExpressionStatement) result).getExpression();
+                    } else {
+                        return result;
+                    }
                 }
-                return result;
+                return closureBlock;
             }
         }
         return null;

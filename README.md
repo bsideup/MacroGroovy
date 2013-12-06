@@ -22,13 +22,14 @@ def returnStatement = macro { return new SomeCoolClass($v{ someVariable }) }
 Now it's possible with MacroGroovy!
 
 Why it's better than AstBuilder?
+----------------
 
 1.  MacroGroovy is easy to use, just call method named "macro" (it's available to all Objects as Extension Method)
 2.  MacroGroovy doesn't require you to create some AstBuilder instances
 3.  MacroGroovy supports substitution ($v inside code), which is impossible with AstBuilder
 4.  MacroGroovy rely on AstBuilder code, so it's tested by core Groovy team and safe to use!
+5.  You can even use macro inside macro:
 
-You can even use macro inside macro:
 ```groovy
 def constructorCall = macro { new SomeCoolClass($v{ macro { "someValue" } }) }
 ```

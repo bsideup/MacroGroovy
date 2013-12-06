@@ -7,15 +7,26 @@ import org.codehaus.groovy.ast.stmt.*
 
 class BasicTest extends GroovyShellTestCase {
     public void testMethod() {
-        
+
         def someVariable = new VariableExpression("someVariable");
-        
-        Statement result = macro {
-            return new NonExistingClass(${someVariable});
+
+        def result = macro {
+            return new NonExistingClass($v{someVariable});
         }
-        
+
         def expected = new ReturnStatement(new ConstructorCallExpression(ClassHelper.make("NonExistingClass"),new ArgumentListExpression(someVariable)));
-        
+
+        assertSyntaxTree(expected, result);
+    }
+    
+    public void testInception() {
+
+        def result = macro {
+            new NonExistingClass($v{macro {someVariable}});
+        }
+
+        def expected = new ConstructorCallExpression(ClassHelper.make("NonExistingClass"),new ArgumentListExpression(new VariableExpression("someVariable")));
+
         assertSyntaxTree(expected, result);
     }
     

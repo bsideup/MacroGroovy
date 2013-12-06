@@ -6,6 +6,8 @@ import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
 import org.codehaus.groovy.ast.builder.AstBuilder;
 import org.codehaus.groovy.ast.expr.*;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
@@ -38,7 +40,7 @@ public class MacroExtensionMethods {
                         
                         MethodCallExpression call = (MethodCallExpression) expression;
                         
-                        if(!call.getMethodAsString().equals("$")) {
+                        if(!call.getMethodAsString().equals(MacroTransformation.DOLLAR_VALUE)) {
                             return super.transform(expression);
                         }
 
@@ -55,8 +57,12 @@ public class MacroExtensionMethods {
                         return null; // Could be null if there is no errors
                     }
                 }).visitBlockStatement(closureBlock);
-                
-                return closureBlock.getStatements().get(0);
+
+                Statement result = closureBlock.getStatements().get(0);
+                if(result instanceof ExpressionStatement) {
+                    return ((ExpressionStatement) result).getExpression();
+                }
+                return result;
             }
         }
         return null;

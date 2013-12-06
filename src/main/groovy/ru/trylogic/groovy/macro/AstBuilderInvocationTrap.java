@@ -72,7 +72,7 @@ class AstBuilderInvocationTrap extends CodeVisitorSupport {
                 public void visitMethodCallExpression(MethodCallExpression call) {
                     super.visitMethodCallExpression(call);
                     
-                    if(call.getMethodAsString().equalsIgnoreCase("$")) {
+                    if(call.getMethodAsString().equalsIgnoreCase(MacroTransformation.DOLLAR_VALUE)) {
                         ArgumentListExpression callArguments = (ArgumentListExpression) call.getArguments();
                         ClosureExpression subtitutionClosure = (ClosureExpression) callArguments.getExpressions().get(0);
                         String subtitutionClosureSource = convertClosureToSource(source, subtitutionClosure);
@@ -93,7 +93,7 @@ class AstBuilderInvocationTrap extends CodeVisitorSupport {
             otherArgs.add(new ConstantExpression(source));
             otherArgs.add(mapExpression);
             call.setArguments(new ArgumentListExpression(otherArgs));
-            call.setMethod(new ConstantExpression("macro"));
+            call.setMethod(new ConstantExpression(MacroTransformation.MACRO_METHOD));
             call.setSpreadSafe(false);
             call.setSafe(false);
             call.setImplicitThis(false);

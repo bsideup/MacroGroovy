@@ -9,6 +9,9 @@ import org.codehaus.groovy.transform.GroovyASTTransformation;
 
 @GroovyASTTransformation(phase =  CompilePhase.CONVERSION)
 public class MacroTransformation extends ClassCodeVisitorSupport implements ASTTransformation {
+    
+    public static final String DOLLAR_VALUE = "$v";
+    public static final String MACRO_METHOD = "macro";
 
     SourceUnit source;
     AstBuilderInvocationTrap transformer;

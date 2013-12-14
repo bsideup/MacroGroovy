@@ -1,6 +1,7 @@
 package ru.trylogic.groovy.macro;
 
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.ImportNode;
 import org.codehaus.groovy.ast.expr.*;
@@ -19,7 +20,7 @@ import static org.codehaus.groovy.ast.expr.VariableExpression.THIS_EXPRESSION;
  * the contents of the closure into expressions by reading the source of the Closure and sending
  * that as a String to AstBuilder.build(String, CompilePhase, boolean) at runtime.
  */
-class AstBuilderInvocationTrap extends CodeVisitorSupport {
+public class AstBuilderInvocationTrap {
 
     private final ReaderSource source;
     private final SourceUnit sourceUnit;
@@ -60,61 +61,43 @@ class AstBuilderInvocationTrap extends CodeVisitorSupport {
      */
     public void visitMethodCallExpression(MethodCallExpression call) {
 
-        if (isBuildInvocation(call)) {
-
-            ClosureExpression closureExpression = getClosureArgument(call);
-            
-            
-            final MapExpression mapExpression = new MapExpression();
-            
-            (new CodeVisitorSupport() {
-                @Override
-                public void visitMethodCallExpression(MethodCallExpression call) {
-                    super.visitMethodCallExpression(call);
-                    
-                    if(call.getMethodAsString().equalsIgnoreCase(MacroTransformation.DOLLAR_VALUE)) {
-                        ArgumentListExpression callArguments = (ArgumentListExpression) call.getArguments();
-                        ClosureExpression subtitutionClosure = (ClosureExpression) callArguments.getExpressions().get(0);
-                        String subtitutionClosureSource = convertClosureToSource(source, subtitutionClosure);
-
-                        ConstantExpression keyExpression = new ConstantExpression(subtitutionClosureSource);
-
-                        mapExpression.addMapEntryExpression(keyExpression, subtitutionClosure);
-
-                        callArguments.getExpressions().add(keyExpression);
-                    }
-                }
-            }).visitClosureExpression(closureExpression);
-            
-            List<Expression> otherArgs = getNonClosureArguments(call);
-            String source = convertClosureToSource(this.source, closureExpression);
-
-            // parameter order is build(CompilePhase, boolean, String)
-            otherArgs.add(new ConstantExpression(source));
-            otherArgs.add(mapExpression);
-            call.setArguments(new ArgumentListExpression(otherArgs));
-            call.setMethod(new ConstantExpression(MacroTransformation.MACRO_METHOD));
-            call.setSpreadSafe(false);
-            call.setSafe(false);
-            call.setImplicitThis(false);
-        } else {
-            // continue normal tree walking
-            call.getObjectExpression().visit(this);
-            call.getMethod().visit(this);
-            call.getArguments().visit(this);
+        if (!isBuildInvocation(call)) {
+            return;
         }
-    }
 
-    private List<Expression> getNonClosureArguments(MethodCallExpression call) {
-        List<Expression> result = new ArrayList<Expression>();
-        if (call.getArguments() instanceof TupleExpression) {
-            for (ASTNode node : ((TupleExpression) call.getArguments()).getExpressions()) {
-                if (!(node instanceof ClosureExpression)) {
-                    result.add((Expression) node);
+        ClosureExpression closureExpression = getClosureArgument(call);
+        
+        final MapExpression mapExpression = new MapExpression();
+        
+        (new CodeVisitorSupport() {
+            @Override
+            public void visitMethodCallExpression(MethodCallExpression call) {
+                super.visitMethodCallExpression(call);
+                
+                if(call.getMethodAsString().equalsIgnoreCase(MacroTransformation.DOLLAR_VALUE)) {
+                    ArgumentListExpression callArguments = (ArgumentListExpression) call.getArguments();
+                    ClosureExpression substitutionClosure = (ClosureExpression) callArguments.getExpressions().get(0);
+                    String substitutionClosureSource = convertClosureToSource(source, substitutionClosure);
+
+                    ConstantExpression keyExpression = new ConstantExpression(substitutionClosureSource);
+
+                    mapExpression.addMapEntryExpression(keyExpression, substitutionClosure);
+
+                    callArguments.getExpressions().add(keyExpression);
                 }
             }
-        }
-        return result;
+        }).visitClosureExpression(closureExpression);
+        
+        List<Expression> otherArgs = new ArrayList<Expression>();
+        String source = convertClosureToSource(this.source, closureExpression);
+
+        otherArgs.add(new ConstantExpression(source));
+        otherArgs.add(mapExpression);
+        call.setArguments(new ArgumentListExpression(otherArgs));
+        call.setObjectExpression(new PropertyExpression(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.class, false)), "INSTANCE"));
+        call.setSpreadSafe(false);
+        call.setSafe(false);
+        call.setImplicitThis(false);
     }
 
     private ClosureExpression getClosureArgument(MethodCallExpression call) {
@@ -171,7 +154,7 @@ class AstBuilderInvocationTrap extends CodeVisitorSupport {
         for (int x = expression.getLineNumber(); x <= expression.getLastLineNumber(); x++) {
             String line = source.getLine(x, null);
             if (line == null) {
-                /*
+                /*FIXME
                 addError(
                         "Error calculating source code for expression. Trying to read line " + x + " from " + source.getClass(),
                         expression
@@ -191,7 +174,7 @@ class AstBuilderInvocationTrap extends CodeVisitorSupport {
 
         String resultSource = result.toString().trim();
         if (!resultSource.startsWith("{")) {
-            /*
+            /*FIXME
             addError(
                     "Error converting ClosureExpression into source code. Closures must start with {. Found: " + source,
                     expression

@@ -45,7 +45,7 @@ Installation
 <dependency>
     <groupId>ru.trylogic.groovy.macro</groupId>
     <artifactId>macro-groovy</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 *   Watch how fast your code becomes easy-to-read and lighter

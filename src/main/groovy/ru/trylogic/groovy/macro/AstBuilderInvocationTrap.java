@@ -1,10 +1,10 @@
 package ru.trylogic.groovy.macro;
 
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.ClassHelper;
-import org.codehaus.groovy.ast.CodeVisitorSupport;
-import org.codehaus.groovy.ast.ImportNode;
+import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.io.ReaderSource;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -91,8 +91,11 @@ public class AstBuilderInvocationTrap {
         List<Expression> otherArgs = new ArrayList<Expression>();
         String source = convertClosureToSource(this.source, closureExpression);
 
+        BlockStatement closureBlock = (BlockStatement) closureExpression.getCode();
+
         otherArgs.add(new ConstantExpression(source));
         otherArgs.add(mapExpression);
+        otherArgs.add(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.getMacroValue(closureBlock).getClass(), false)));
         call.setArguments(new ArgumentListExpression(otherArgs));
         call.setObjectExpression(new PropertyExpression(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.class, false)), "INSTANCE"));
         call.setSpreadSafe(false);

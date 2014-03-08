@@ -1,5 +1,6 @@
 package ru.trylogic.groovy.macro.examples.basic
 
+import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.*
@@ -7,12 +8,13 @@ import org.codehaus.groovy.ast.stmt.*
 
 import static org.codehaus.groovy.ast.expr.VariableExpression.*;
 
+@CompileStatic // yep, it's ok with CompileStatic ;)
 class BasicTest extends GroovyShellTestCase {
     public void testMethod() {
 
         def someVariable = new VariableExpression("someVariable");
 
-        def result = macro {
+        ReturnStatement result = macro {
             return new NonExistingClass($v{someVariable});
         }
 
@@ -23,7 +25,7 @@ class BasicTest extends GroovyShellTestCase {
 
     public void testInception() {
 
-        def result = macro {
+        ConstructorCallExpression result = macro {
             new NonExistingClass($v{macro {someVariable}});
         }
 
@@ -43,7 +45,7 @@ class BasicTest extends GroovyShellTestCase {
                 [
                         new ExpressionStatement(new MethodCallExpression(THIS_EXPRESSION, "println", new ArgumentListExpression(new ConstantExpression("foo")))),
                         new ExpressionStatement(new MethodCallExpression(THIS_EXPRESSION, "println", new ArgumentListExpression(new ConstantExpression("bar")))),
-                ],
+                ] as List<Statement>,
                 new VariableScope()
         )
 

@@ -22,7 +22,7 @@ import java.util.Map;
 public enum MacroBuilder {
     INSTANCE;
 
-    public Object macro(String source, final Map<String, Closure<Expression>> context) {
+    public <T> T macro(String source, final Map<String, Closure<Expression>> context, Class<T> resultClass) {
         String labelledSource = "__synthesized__label__" + System.currentTimeMillis()+ "__:" + source;
         List<ASTNode> nodes = (new AstBuilder()).buildFromString(CompilePhase.CONVERSION, true, labelledSource);
 
@@ -59,17 +59,21 @@ public enum MacroBuilder {
                     }
                 }).visitBlockStatement(closureBlock);
 
-                if(closureBlock.getStatements().size() == 1) {
-                    Statement result = closureBlock.getStatements().get(0);
-                    if(result instanceof ExpressionStatement) {
-                        return ((ExpressionStatement) result).getExpression();
-                    } else {
-                        return result;
-                    }
-                }
-                return closureBlock;
+                return (T) getMacroValue(closureBlock);
             }
         }
         return null;
+    }
+
+    public static Object getMacroValue(BlockStatement closureBlock) {
+        if(closureBlock.getStatements().size() == 1) {
+            Statement result = closureBlock.getStatements().get(0);
+            if(result instanceof ExpressionStatement) {
+                return ((ExpressionStatement) result).getExpression();
+            } else {
+                return result;
+            }
+        }
+        return closureBlock;
     }
 }

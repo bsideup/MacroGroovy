@@ -41,7 +41,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
-        <org.codehaus.groovy.version>2.1.0</org.codehaus.groovy.version>
+        <org.codehaus.groovy.version>2.2.1</org.codehaus.groovy.version>
     </properties>
 
     <build>
@@ -85,6 +85,11 @@
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-test</artifactId>
+            <version>${org.codehaus.groovy.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-console</artifactId>
             <version>${org.codehaus.groovy.version}</version>
         </dependency>
 

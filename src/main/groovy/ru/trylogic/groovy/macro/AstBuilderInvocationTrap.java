@@ -57,15 +57,15 @@ public class AstBuilderInvocationTrap {
      * Attempts to find AstBuilder 'from code' invocations. When found, converts them into calls
      * to the 'from string' approach.
      *
-     * @param call the method call expression that may or may not be an AstBuilder 'from code' invocation.
+     * @param macroCall the method call expression that may or may not be an AstBuilder 'from code' invocation.
      */
-    public void visitMethodCallExpression(MethodCallExpression call) {
+    public void visitMethodCallExpression(final MethodCallExpression macroCall) {
 
-        if (!isBuildInvocation(call)) {
+        if (!isBuildInvocation(macroCall)) {
             return;
         }
 
-        ClosureExpression closureExpression = getClosureArgument(call);
+        final ClosureExpression closureExpression = getClosureArgument(macroCall);
         
         final MapExpression mapExpression = new MapExpression();
         
@@ -77,9 +77,16 @@ public class AstBuilderInvocationTrap {
                 if(call.getMethodAsString().equalsIgnoreCase(MacroTransformation.DOLLAR_VALUE)) {
                     ArgumentListExpression callArguments = (ArgumentListExpression) call.getArguments();
                     ClosureExpression substitutionClosure = (ClosureExpression) callArguments.getExpressions().get(0);
-                    String substitutionClosureSource = convertClosureToSource(source, substitutionClosure);
-
-                    ConstantExpression keyExpression = new ConstantExpression(substitutionClosureSource);
+                    
+                    ConstructorCallExpression keyExpression = new ConstructorCallExpression(
+                            ClassHelper.make(SubstitutionKey.class),
+                            new ArgumentListExpression(new Expression[] {
+                                    new ConstantExpression(call.getLineNumber() - closureExpression.getLineNumber()),
+                                    new ConstantExpression(call.getColumnNumber() - (call.getLineNumber() == closureExpression.getLineNumber() ? closureExpression.getColumnNumber() : 0)),
+                                    new ConstantExpression(call.getLastLineNumber() - closureExpression.getLineNumber()),
+                                    new ConstantExpression(call.getLastColumnNumber() - (call.getLastLineNumber() == closureExpression.getLineNumber() ? closureExpression.getColumnNumber() : 0))
+                            })
+                        );
 
                     mapExpression.addMapEntryExpression(keyExpression, substitutionClosure);
 
@@ -93,11 +100,11 @@ public class AstBuilderInvocationTrap {
 
         otherArgs.add(new ConstantExpression(source));
         otherArgs.add(mapExpression);
-        call.setArguments(new ArgumentListExpression(otherArgs));
-        call.setObjectExpression(new PropertyExpression(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.class, false)), "INSTANCE"));
-        call.setSpreadSafe(false);
-        call.setSafe(false);
-        call.setImplicitThis(false);
+        macroCall.setArguments(new ArgumentListExpression(otherArgs));
+        macroCall.setObjectExpression(new PropertyExpression(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.class, false)), "INSTANCE"));
+        macroCall.setSpreadSafe(false);
+        macroCall.setSafe(false);
+        macroCall.setImplicitThis(false);
     }
 
     private ClosureExpression getClosureArgument(MethodCallExpression call) {
@@ -120,19 +127,23 @@ public class AstBuilderInvocationTrap {
      */
     private boolean isBuildInvocation(MethodCallExpression call) {
         if (call == null) throw new IllegalArgumentException("Null: call");
+        
+        if(!(call.getMethod() instanceof ConstantExpression)) {
+            return false;
+        }
+        
+        if(!(MacroTransformation.MACRO_METHOD.equals(call.getMethodAsString()))) {
+            return false;
+        }
 
-        // is method name correct?
-        if (call.getMethod() instanceof ConstantExpression && MacroTransformation.MACRO_METHOD.equals(((ConstantExpression) call.getMethod()).getValue())) {
-
-            // is method object correct type?
-            if (call.getObjectExpression() == THIS_EXPRESSION) {
-                // is one of the arguments a closure?
-                if (call.getArguments() != null && call.getArguments() instanceof TupleExpression) {
-                    if (((TupleExpression) call.getArguments()).getExpressions() != null) {
-                        for (ASTNode node : ((TupleExpression) call.getArguments()).getExpressions()) {
-                            if (node instanceof ClosureExpression) {
-                                return true;
-                            }
+        // is method object correct type?
+        if (call.getObjectExpression() == THIS_EXPRESSION) {
+            // is one of the arguments a closure?
+            if (call.getArguments() != null && call.getArguments() instanceof TupleExpression) {
+                if (((TupleExpression) call.getArguments()).getExpressions() != null) {
+                    for (ASTNode node : ((TupleExpression) call.getArguments()).getExpressions()) {
+                        if (node instanceof ClosureExpression) {
+                            return true;
                         }
                     }
                 }
@@ -147,19 +158,17 @@ public class AstBuilderInvocationTrap {
      * @param expression a closure
      * @return the source the closure was created from
      */
-    public static String convertClosureToSource(ReaderSource source, ClosureExpression expression) {
+    public String convertClosureToSource(ReaderSource source, ClosureExpression expression) {
         if (expression == null) throw new IllegalArgumentException("Null: expression");
 
         StringBuilder result = new StringBuilder();
         for (int x = expression.getLineNumber(); x <= expression.getLastLineNumber(); x++) {
             String line = source.getLine(x, null);
             if (line == null) {
-                /*FIXME
                 addError(
                         "Error calculating source code for expression. Trying to read line " + x + " from " + source.getClass(),
                         expression
                 );
-                */
             }
             if (x == expression.getLastLineNumber()) {
                 line = line.substring(0, expression.getLastColumnNumber() - 1);
@@ -172,14 +181,12 @@ public class AstBuilderInvocationTrap {
         }
 
 
-        String resultSource = result.toString().trim();
+        String resultSource = result.toString();//.trim();
         if (!resultSource.startsWith("{")) {
-            /*FIXME
             addError(
                     "Error converting ClosureExpression into source code. Closures must start with {. Found: " + source,
                     expression
             );
-            */
         }
 
         return resultSource;

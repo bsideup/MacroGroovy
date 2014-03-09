@@ -3,8 +3,6 @@ package ru.trylogic.groovy.macro;
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.*;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
-import org.codehaus.groovy.ast.stmt.ExpressionStatement;
-import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.io.ReaderSource;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -65,37 +63,12 @@ public class AstBuilderInvocationTrap {
             return;
         }
 
-        // is one of the arguments a closure?
-        Expression macroCallArguments = macroCall.getArguments();
-        if (macroCallArguments == null) {
-            addError("Macro closure should have arguments", macroCall);
-            return;
-        }
+        final ClosureExpression closureExpression = getClosureArgument(macroCall);
         
-        if(!(macroCallArguments instanceof TupleExpression)) {
-            addError("Macro closure should have TupleExpression as arguments", macroCallArguments);
-            return;
-        }
-        
-        TupleExpression tupleArguments = (TupleExpression) macroCallArguments;
-
-        if (tupleArguments.getExpressions() == null) {
-            addError("Macro closure arguments should have expressions", tupleArguments);
-            return;
-        }
-        
-        if(tupleArguments.getExpressions().size() != 1) {
-            addError("Macro closure arguments should have exactly one argument", tupleArguments);
+        if(closureExpression == null) {
             return;
         }
 
-        if (!(tupleArguments.getExpression(0) instanceof ClosureExpression)) {
-            addError("Macro closure argument should be a closure", tupleArguments.getExpression(0));
-            return;
-        }
-
-        final ClosureExpression closureExpression = (ClosureExpression) tupleArguments.getExpression(0);
-        
         if(closureExpression.getParameters() != null && closureExpression.getParameters().length > 0) {
             addError("Macro closure arguments are not allowed", closureExpression);
         }
@@ -107,34 +80,67 @@ public class AstBuilderInvocationTrap {
             public void visitMethodCallExpression(MethodCallExpression call) {
                 super.visitMethodCallExpression(call);
                 
-                if(call.getMethodAsString().equalsIgnoreCase(MacroTransformation.DOLLAR_VALUE)) {
-                    ArgumentListExpression callArguments = (ArgumentListExpression) call.getArguments();
-                    ClosureExpression substitutionClosure = (ClosureExpression) callArguments.getExpressions().get(0);
+                if(isBuildInvocation(call, MacroTransformation.DOLLAR_VALUE)) {
+                    ClosureExpression substitutionClosureExpression = getClosureArgument(call);
+                    
+                    if(substitutionClosureExpression == null) {
+                        return;
+                    }
 
                     SubstitutionKey key = new SubstitutionKey(call, closureExpression.getLineNumber(), closureExpression.getColumnNumber());
                     
-                    ConstructorCallExpression keyExpression = key.toConstructorCallExpression();
-
-                    mapExpression.addMapEntryExpression(keyExpression, substitutionClosure);
-
-                    callArguments.getExpressions().add(keyExpression);
+                    mapExpression.addMapEntryExpression(key.toConstructorCallExpression(), substitutionClosureExpression);
                 }
             }
         }).visitClosureExpression(closureExpression);
         
-        List<Expression> otherArgs = new ArrayList<Expression>();
         String source = convertClosureToSource(this.source, closureExpression);
 
         BlockStatement closureBlock = (BlockStatement) closureExpression.getCode();
 
+        List<Expression> otherArgs = new ArrayList<Expression>();
         otherArgs.add(new ConstantExpression(source));
         otherArgs.add(mapExpression);
         otherArgs.add(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.getMacroValue(closureBlock).getClass(), false)));
+
         macroCall.setArguments(new ArgumentListExpression(otherArgs));
         macroCall.setObjectExpression(new PropertyExpression(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.class, false)), "INSTANCE"));
         macroCall.setSpreadSafe(false);
         macroCall.setSafe(false);
         macroCall.setImplicitThis(false);
+    }
+    
+    protected ClosureExpression getClosureArgument(MethodCallExpression call) {
+        Expression macroCallArguments = call.getArguments();
+        if (macroCallArguments == null) {
+            addError("Call should have arguments", call);
+            return null;
+        }
+
+        if(!(macroCallArguments instanceof TupleExpression)) {
+            addError("Call should have TupleExpression as arguments", macroCallArguments);
+            return null;
+        }
+
+        TupleExpression tupleArguments = (TupleExpression) macroCallArguments;
+
+        if (tupleArguments.getExpressions() == null) {
+            addError("Call arguments should have expressions", tupleArguments);
+            return null;
+        }
+
+        if(tupleArguments.getExpressions().size() != 1) {
+            addError("Call arguments should have exactly one argument", tupleArguments);
+            return null;
+        }
+
+        Expression result = tupleArguments.getExpression(0);
+        if (!(result instanceof ClosureExpression)) {
+            addError("Call argument should be a closure", result);
+            return null;
+        }
+
+        return (ClosureExpression) result;
     }
 
     /**

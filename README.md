@@ -16,7 +16,7 @@ def returnStatement = new ReturnStatement(
 Looks familar, huh? Maybe this will be better?
 ```groovy
 def someVariable = macro { "someValue" };
-def returnStatement = macro { return new SomeCoolClass($v{ someVariable }) }
+ReturnStatement returnStatement = macro { return new SomeCoolClass($v{ someVariable }) }
 ```
 
 Now it's possible with MacroGroovy!
@@ -27,8 +27,9 @@ Why it's better than AstBuilder?
 1.  MacroGroovy is easy to use, just call method named "macro" (it's available to all Objects as Extension Method)
 2.  MacroGroovy doesn't require you to create some AstBuilder instances
 3.  MacroGroovy supports substitution ($v inside code), which is impossible with AstBuilder
-4.  MacroGroovy rely on AstBuilder code, so it's tested by core Groovy team and safe to use!
-5.  You can even use macro inside macro:
+4.  MacroGroovy returns result of exactly the same type as expression, no ugly casting at all
+5.  MacroGroovy rely on AstBuilder code, so it's tested by core Groovy team and safe to use!
+6.  You can even use macro inside macro:
 
 ```groovy
 def constructorCall = macro { new SomeCoolClass($v{ macro { "someValue" } }) }
@@ -45,7 +46,7 @@ Installation
 <dependency>
     <groupId>ru.trylogic.groovy.macro</groupId>
     <artifactId>macro-groovy</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 *   Watch how fast your code becomes easy-to-read and lighter

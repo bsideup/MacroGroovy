@@ -18,9 +18,10 @@ package ru.trylogic.groovy.macro.examples.basic
 import org.junit.Assert
 
 /**
- *
- * Some useful AST assertion methods.
- * @author Hamlet D'Arcy
+ * This class was copy-pasted from Groovy test sources because i was unable to find it in any jar.
+ * 
+ * TODO ask them make it available :)
+ * 
  */
 class AstAssert {
 

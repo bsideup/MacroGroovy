@@ -25,7 +25,8 @@ public enum MacroBuilder {
     public <T> T macro(String source, final Map<SubstitutionKey, Closure<Expression>> context, Class<T> resultClass) {
         final String label = "__synthesized__label__" + System.currentTimeMillis()+ "__:";
         final String labelledSource = label + source;
-        final int additionalLines = 1;
+        final int linesOffset = 1;
+        final int columnsOffset = label.length() + 1; // +1 because of {
         
         List<ASTNode> nodes = (new AstBuilder()).buildFromString(CompilePhase.CONVERSION, true, labelledSource);
 
@@ -42,25 +43,18 @@ public enum MacroBuilder {
 
                         MethodCallExpression call = (MethodCallExpression) expression;
 
-                        if(!call.getMethodAsString().equals(MacroTransformation.DOLLAR_VALUE)) {
+                        if(!AstBuilderInvocationTrap.isBuildInvocation(call, MacroTransformation.DOLLAR_VALUE)) {
                             return super.transform(expression);
                         }
 
-                        SubstitutionKey key = new SubstitutionKey(
-                                call.getLineNumber() - additionalLines,
-                                call.getColumnNumber() - (call.getLineNumber() == additionalLines ? label.length() + 1 : 0),
-                                call.getLastLineNumber() - additionalLines,
-                                call.getLastColumnNumber() - (call.getLastLineNumber() == additionalLines ? label.length() + 1 : 0)
-                        );
+                        SubstitutionKey key = new SubstitutionKey(call, linesOffset, columnsOffset);
                         
-                        Closure<Expression> subtitutionClosure = context.get(key);
-
-                        return subtitutionClosure.call();
+                        return context.get(key).call();
                     }
 
                     @Override
                     protected SourceUnit getSourceUnit() {
-                        return null; // Could be null if there is no errors
+                        return null; // Could be null if there are no errors
                     }
                 }).visitBlockStatement(closureBlock);
 

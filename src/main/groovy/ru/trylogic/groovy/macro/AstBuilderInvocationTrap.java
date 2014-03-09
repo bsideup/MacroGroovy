@@ -15,10 +15,10 @@ import java.util.List;
 
 import static org.codehaus.groovy.ast.expr.VariableExpression.THIS_EXPRESSION;
 
-/**
- * This class traps invocations of AstBuilder.build(CompilePhase, boolean, Closure) and converts
- * the contents of the closure into expressions by reading the source of the Closure and sending
- * that as a String to AstBuilder.build(String, CompilePhase, boolean) at runtime.
+/*
+    This class was copy-pasted from Groovy lang sources because it's private.
+    
+    TODO send pull request to groovy-core to make it public
  */
 public class AstBuilderInvocationTrap {
 
@@ -61,11 +61,44 @@ public class AstBuilderInvocationTrap {
      */
     public void visitMethodCallExpression(final MethodCallExpression macroCall) {
 
-        if (!isBuildInvocation(macroCall)) {
+        if (!isBuildInvocation(macroCall, MacroTransformation.MACRO_METHOD)) {
             return;
         }
 
-        final ClosureExpression closureExpression = getClosureArgument(macroCall);
+        // is one of the arguments a closure?
+        Expression macroCallArguments = macroCall.getArguments();
+        if (macroCallArguments == null) {
+            addError("Macro closure should have arguments", macroCall);
+            return;
+        }
+        
+        if(!(macroCallArguments instanceof TupleExpression)) {
+            addError("Macro closure should have TupleExpression as arguments", macroCallArguments);
+            return;
+        }
+        
+        TupleExpression tupleArguments = (TupleExpression) macroCallArguments;
+
+        if (tupleArguments.getExpressions() == null) {
+            addError("Macro closure arguments should have expressions", tupleArguments);
+            return;
+        }
+        
+        if(tupleArguments.getExpressions().size() != 1) {
+            addError("Macro closure arguments should have exactly one argument", tupleArguments);
+            return;
+        }
+
+        if (!(tupleArguments.getExpression(0) instanceof ClosureExpression)) {
+            addError("Macro closure argument should be a closure", tupleArguments.getExpression(0));
+            return;
+        }
+
+        final ClosureExpression closureExpression = (ClosureExpression) tupleArguments.getExpression(0);
+        
+        if(closureExpression.getParameters() != null && closureExpression.getParameters().length > 0) {
+            addError("Macro closure arguments are not allowed", closureExpression);
+        }
         
         final MapExpression mapExpression = new MapExpression();
         
@@ -77,16 +110,10 @@ public class AstBuilderInvocationTrap {
                 if(call.getMethodAsString().equalsIgnoreCase(MacroTransformation.DOLLAR_VALUE)) {
                     ArgumentListExpression callArguments = (ArgumentListExpression) call.getArguments();
                     ClosureExpression substitutionClosure = (ClosureExpression) callArguments.getExpressions().get(0);
+
+                    SubstitutionKey key = new SubstitutionKey(call, closureExpression.getLineNumber(), closureExpression.getColumnNumber());
                     
-                    ConstructorCallExpression keyExpression = new ConstructorCallExpression(
-                            ClassHelper.make(SubstitutionKey.class),
-                            new ArgumentListExpression(new Expression[] {
-                                    new ConstantExpression(call.getLineNumber() - closureExpression.getLineNumber()),
-                                    new ConstantExpression(call.getColumnNumber() - (call.getLineNumber() == closureExpression.getLineNumber() ? closureExpression.getColumnNumber() : 0)),
-                                    new ConstantExpression(call.getLastLineNumber() - closureExpression.getLineNumber()),
-                                    new ConstantExpression(call.getLastColumnNumber() - (call.getLastLineNumber() == closureExpression.getLineNumber() ? closureExpression.getColumnNumber() : 0))
-                            })
-                        );
+                    ConstructorCallExpression keyExpression = key.toConstructorCallExpression();
 
                     mapExpression.addMapEntryExpression(keyExpression, substitutionClosure);
 
@@ -110,49 +137,26 @@ public class AstBuilderInvocationTrap {
         macroCall.setImplicitThis(false);
     }
 
-    private ClosureExpression getClosureArgument(MethodCallExpression call) {
-
-        if (call.getArguments() instanceof TupleExpression) {
-            for (ASTNode node : ((TupleExpression) call.getArguments()).getExpressions()) {
-                if (node instanceof ClosureExpression) {
-                    return (ClosureExpression) node;
-                }
-            }
-        }
-        return null;
-    }
-
     /**
      * Looks for method calls on the AstBuilder class called build that take
      * a Closure as parameter. This is all needed b/c build is overloaded.
      *
      * @param call the method call expression, may not be null
      */
-    private boolean isBuildInvocation(MethodCallExpression call) {
+    public static boolean isBuildInvocation(MethodCallExpression call, String methodName) {
         if (call == null) throw new IllegalArgumentException("Null: call");
+        if(methodName == null) throw new IllegalArgumentException("Null: methodName");
         
         if(!(call.getMethod() instanceof ConstantExpression)) {
             return false;
         }
         
-        if(!(MacroTransformation.MACRO_METHOD.equals(call.getMethodAsString()))) {
+        if(!(methodName.equals(call.getMethodAsString()))) {
             return false;
         }
 
         // is method object correct type?
-        if (call.getObjectExpression() == THIS_EXPRESSION) {
-            // is one of the arguments a closure?
-            if (call.getArguments() != null && call.getArguments() instanceof TupleExpression) {
-                if (((TupleExpression) call.getArguments()).getExpressions() != null) {
-                    for (ASTNode node : ((TupleExpression) call.getArguments()).getExpressions()) {
-                        if (node instanceof ClosureExpression) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
+        return call.getObjectExpression() == THIS_EXPRESSION;
     }
 
     /**
@@ -161,7 +165,7 @@ public class AstBuilderInvocationTrap {
      * @param expression a closure
      * @return the source the closure was created from
      */
-    public String convertClosureToSource(ReaderSource source, ClosureExpression expression) {
+    private String convertClosureToSource(ReaderSource source, ClosureExpression expression) {
         if (expression == null) throw new IllegalArgumentException("Null: expression");
 
         StringBuilder result = new StringBuilder();

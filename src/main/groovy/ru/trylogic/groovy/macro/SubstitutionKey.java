@@ -1,5 +1,11 @@
 package ru.trylogic.groovy.macro;
 
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+
 public class SubstitutionKey {
 
     private int startLine;
@@ -12,6 +18,27 @@ public class SubstitutionKey {
         this.startColumn = startColumn;
         this.endLine = endLine;
         this.endColumn = endColumn;
+    }
+    
+    public SubstitutionKey(Expression expression, int linesOffset, int columnsOffset) {
+        this(
+                expression.getLineNumber() - linesOffset,
+                expression.getColumnNumber() - (expression.getLineNumber() == linesOffset ? columnsOffset : 0),
+                expression.getLastLineNumber() - linesOffset,
+                expression.getLastColumnNumber() - (expression.getLastLineNumber() == linesOffset ? columnsOffset : 0)
+        );
+    }
+    
+    public ConstructorCallExpression toConstructorCallExpression() {
+        return new ConstructorCallExpression(
+                ClassHelper.make(this.getClass()),
+                new ArgumentListExpression(new Expression[] {
+                        new ConstantExpression(startLine),
+                        new ConstantExpression(startColumn),
+                        new ConstantExpression(endLine),
+                        new ConstantExpression(endColumn)
+                })
+        );
     }
 
     @Override

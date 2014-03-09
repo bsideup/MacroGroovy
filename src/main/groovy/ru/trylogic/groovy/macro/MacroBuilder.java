@@ -22,11 +22,12 @@ import java.util.Map;
 public enum MacroBuilder {
     INSTANCE;
 
-    public <T> T macro(String source, final Map<String, Closure<Expression>> context, Class<T> resultClass) {
-        String labelledSource = "__synthesized__label__" + System.currentTimeMillis()+ "__:" + source;
+    public <T> T macro(String source, final Map<SubstitutionKey, Closure<Expression>> context, Class<T> resultClass) {
+        final String label = "__synthesized__label__" + System.currentTimeMillis()+ "__:";
+        final String labelledSource = label + source;
+        final int additionalLines = 1;
+        
         List<ASTNode> nodes = (new AstBuilder()).buildFromString(CompilePhase.CONVERSION, true, labelledSource);
-
-        final StringReaderSource readerSource = new StringReaderSource(labelledSource, new CompilerConfiguration());
 
         for(ASTNode node : nodes) {
             if (node instanceof BlockStatement) {
@@ -45,10 +46,14 @@ public enum MacroBuilder {
                             return super.transform(expression);
                         }
 
-                        ArgumentListExpression callArguments = (ArgumentListExpression) call.getArguments();
-                        ClosureExpression subtitutionClosureExpression = (ClosureExpression) callArguments.getExpressions().get(0);
-
-                        Closure<Expression> subtitutionClosure = context.get(AstBuilderInvocationTrap.convertClosureToSource(readerSource, subtitutionClosureExpression));
+                        SubstitutionKey key = new SubstitutionKey(
+                                call.getLineNumber() - additionalLines,
+                                call.getColumnNumber() - (call.getLineNumber() == additionalLines ? label.length() + 1 : 0),
+                                call.getLastLineNumber() - additionalLines,
+                                call.getLastColumnNumber() - (call.getLastLineNumber() == additionalLines ? label.length() + 1 : 0)
+                        );
+                        
+                        Closure<Expression> subtitutionClosure = context.get(key);
 
                         return subtitutionClosure.call();
                     }

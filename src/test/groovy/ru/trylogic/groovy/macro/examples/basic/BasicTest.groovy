@@ -22,6 +22,16 @@ class BasicTest extends GroovyShellTestCase {
 
         assertSyntaxTree(expected, result);
     }
+    
+    public void testAsIs() {
+        def expected = new ExpressionStatement(new MethodCallExpression(THIS_EXPRESSION, "println", new ConstantExpression("foo")));
+        
+        ExpressionStatement result = macro(true) {
+            println "foo"
+        }
+
+        assertSyntaxTree(expected, result);
+    }
 
     public void testInception() {
 

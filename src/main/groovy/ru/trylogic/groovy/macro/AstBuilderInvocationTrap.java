@@ -110,7 +110,7 @@ public class AstBuilderInvocationTrap {
         macroCall.setImplicitThis(false);
     }
     
-    protected ClosureExpression getClosureArgument(MethodCallExpression call) {
+    protected TupleExpression getMacroArguments(MethodCallExpression call) {
         Expression macroCallArguments = call.getArguments();
         if (macroCallArguments == null) {
             addError("Call should have arguments", call);
@@ -128,15 +128,21 @@ public class AstBuilderInvocationTrap {
             addError("Call arguments should have expressions", tupleArguments);
             return null;
         }
+        
+        return tupleArguments;
+    }
+    
+    protected ClosureExpression getClosureArgument(MethodCallExpression call) {
+        TupleExpression tupleArguments = getMacroArguments(call);
 
         if(tupleArguments.getExpressions().size() != 1) {
-            addError("Call arguments should have exactly one argument", tupleArguments);
+            addError("Call arguments should have at least one argument", tupleArguments);
             return null;
         }
 
         Expression result = tupleArguments.getExpression(0);
         if (!(result instanceof ClosureExpression)) {
-            addError("Call argument should be a closure", result);
+            addError("Last call argument should be a closure", result);
             return null;
         }
 

@@ -48,7 +48,6 @@ public class MacroTransformation extends ClassCodeVisitorSupport implements ASTT
         return source;
     }
 
-    /* Logging
     @Override
     public void visitClass(ClassNode node) {
         super.visitClass(node);
@@ -58,7 +57,6 @@ public class MacroTransformation extends ClassCodeVisitorSupport implements ASTT
         visitor.visitClass(node);
         System.out.println(writer.toString());
     }
-    */
 }
 
 

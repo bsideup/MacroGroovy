@@ -7,6 +7,10 @@ public class MacroExtensionMethods {
         return null;
     }
 
+    public static Object macro(Object self, boolean asIs, Closure cl) {
+        return null;
+    }
+
     public static Object $v(Object self, Closure cl) {
         return null;
     }

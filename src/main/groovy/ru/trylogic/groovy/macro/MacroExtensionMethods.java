@@ -3,11 +3,11 @@ package ru.trylogic.groovy.macro;
 import groovy.lang.Closure;
 
 public class MacroExtensionMethods {
-    public static Object macro(Object self, Closure cl) {
+    public static <T> T macro(Object self, Closure cl) {
         return null;
     }
 
-    public static Object macro(Object self, boolean asIs, Closure cl) {
+    public static <T> T macro(Object self, boolean asIs, Closure cl) {
         return null;
     }
 

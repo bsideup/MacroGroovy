@@ -97,11 +97,40 @@ public class AstBuilderInvocationTrap {
         String source = convertClosureToSource(this.source, closureExpression);
 
         BlockStatement closureBlock = (BlockStatement) closureExpression.getCode();
+        
+        Boolean asIs = false;
+        
+        TupleExpression macroArguments = getMacroArguments(macroCall);
+        
+        if(macroArguments == null) {
+            return;
+        }
+
+        List<Expression> macroArgumentsExpressions = macroArguments.getExpressions();
+        
+        if(macroArgumentsExpressions.size() > 1) {
+            Expression firstArgument = macroArgumentsExpressions.get(0);
+            
+            if(!(firstArgument instanceof ConstantExpression)) {
+                addError("AsIs argument value should be constant(true or false)", firstArgument);
+                return;
+            }
+            
+            ConstantExpression asIsConstantExpression = (ConstantExpression) firstArgument;
+            
+            if(!(asIsConstantExpression.getValue() instanceof Boolean)) {
+                addError("AsIs argument value should be boolean", asIsConstantExpression);
+                return;
+            }
+
+            asIs = (Boolean) asIsConstantExpression.getValue();
+        }
 
         List<Expression> otherArgs = new ArrayList<Expression>();
+        otherArgs.add(new ConstantExpression(asIs));
         otherArgs.add(new ConstantExpression(source));
         otherArgs.add(mapExpression);
-        otherArgs.add(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.getMacroValue(closureBlock).getClass(), false)));
+        otherArgs.add(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.getMacroValue(closureBlock, asIs).getClass(), false)));
 
         macroCall.setArguments(new ArgumentListExpression(otherArgs));
         macroCall.setObjectExpression(new PropertyExpression(new ClassExpression(ClassHelper.makeWithoutCaching(MacroBuilder.class, false)), "INSTANCE"));
@@ -135,12 +164,12 @@ public class AstBuilderInvocationTrap {
     protected ClosureExpression getClosureArgument(MethodCallExpression call) {
         TupleExpression tupleArguments = getMacroArguments(call);
 
-        if(tupleArguments.getExpressions().size() != 1) {
+        if(tupleArguments.getExpressions().size() < 1) {
             addError("Call arguments should have at least one argument", tupleArguments);
             return null;
         }
 
-        Expression result = tupleArguments.getExpression(0);
+        Expression result = tupleArguments.getExpression(tupleArguments.getExpressions().size() - 1);
         if (!(result instanceof ClosureExpression)) {
             addError("Last call argument should be a closure", result);
             return null;

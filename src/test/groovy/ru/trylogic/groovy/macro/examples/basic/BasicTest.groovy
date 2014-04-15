@@ -24,13 +24,12 @@ class BasicTest extends GroovyShellTestCase {
     }
     
     public void testAsIs() {
-        String messageToPrint = "foo"
         def expected = new BlockStatement([
-                new ExpressionStatement(new MethodCallExpression(THIS_EXPRESSION, "println", new ConstantExpression(messageToPrint)))
+                new ExpressionStatement(new MethodCallExpression(THIS_EXPRESSION, "println", new ArgumentListExpression(new ConstantExpression("foo"))))
         ] as List<Statement>, new VariableScope());
 
         BlockStatement result = macro(true) {
-            println $v{messageToPrint}
+            println "foo"
         }
 
         assertSyntaxTree(expected, result);
